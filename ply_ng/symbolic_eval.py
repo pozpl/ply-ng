@@ -31,6 +31,27 @@ class Expression(ABC):
         return Call(self, args=args, kwargs=kwargs)
 
 
+class Symbol(Expression):
+    """`Symbol(name)` is an atomic symbolic expression, labelled with an
+    arbitrary `name`.
+    Something in evaluation context denoted with a name given to a symbol (through constructor)
+    """
+
+    def __init__(self, name):
+        self._name = name
+
+    def _eval(self, context, **options):
+        if options.get('log'):
+            print('Symbol._eval', repr(self))
+        result = context[self._name]
+        if options.get('log'):
+            print('Returning', repr(self), '=>', repr(result))
+        return result
+
+    def __repr__(self):
+        return 'Symbol(%s)' % repr(self._name)
+
+
 class GetAttr(Expression):
     """`GetAttr(obj, name)` is a symbolic expression representing the result of
     `getattr(obj, name)`. (`obj` and `name` can themselves be symbolic.)"""
