@@ -1,2 +1,4 @@
 .vscode
 .idea
+ply_ng/__pycache__
+tests/__pycache__
