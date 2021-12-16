@@ -1,6 +1,45 @@
 
 from abc import ABC
 
+_magic_method_names = [
+    '__abs__', '__add__', '__and__', '__cmp__', '__complex__', '__contains__',
+    '__delattr__', '__delete__', '__delitem__', '__delslice__', '__div__',
+    '__divmod__', '__enter__', '__eq__', '__exit__', '__float__',
+    '__floordiv__', '__ge__', '__get__', '__getitem__', '__getslice__',
+    '__gt__', '__hash__', '__hex__', '__iadd__', '__iand__', '__idiv__',
+    '__ifloordiv__', '__ilshift__', '__imod__', '__imul__', '__index__',
+    '__int__', '__invert__', '__ior__', '__ipow__', '__irshift__', '__isub__',
+    '__iter__', '__itruediv__', '__ixor__', '__le__', '__len__', '__long__',
+    '__lshift__', '__lt__', '__mod__', '__mul__', '__ne__', '__neg__',
+    '__nonzero__', '__oct__', '__or__', '__pos__', '__pow__', '__radd__',
+    '__rand__', '__rcmp__', '__rdiv__', '__rdivmod__', '__repr__',
+    '__reversed__', '__rfloordiv__', '__rlshift__', '__rmod__', '__rmul__',
+    '__ror__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__',
+    '__rtruediv__', '__rxor__', '__set__', '__setitem__', '__setslice__',
+    '__str__', '__sub__', '__truediv__', '__unicode__', '__xor__',
+]
+
+# Not included: [
+#   '__call__', '__coerce__', '__del__', '__dict__', '__getattr__',
+#   '__getattribute__', '__init__', '__new__', '__setattr__'
+# ]
+
+
+def add_operator_hooks(cls):
+
+  def get_hook(name):
+    def op_hook(self, *args, **kwargs):
+      return Call(GetAttr(self, name), args, kwargs)
+    return op_hook
+
+  for name in _magic_method_names:
+    setattr(cls, name, get_hook(name))  
+  
+  return cls
+
+
+
+@add_operator_hooks
 class Expression(ABC):
     """
     Base class for lazy symblic expressions
@@ -104,6 +143,7 @@ class Call(Expression):
 def eval_if_symbolic(obj, context, **options):
     """Evaluate an object if it is a symbolic expression, or otherwise just
     returns it back.
+    It determines if it's symbolic based on presence of _eval method 
     Args:
         obj: Either a symbolic expression, or anything else (in which case this
             is a noop).
@@ -119,3 +159,57 @@ def eval_if_symbolic(obj, context, **options):
     """
     return obj._eval(context, **options) if hasattr(obj, '_eval') else obj
 
+
+def to_callable(obj):
+    """Turn an object into a callable.
+    Args:
+        obj: This can be
+            * **a symbolic expression**, in which case the output callable
+              evaluates the expression with symbols taking values from the
+              callable's arguments (listed arguments named according to their
+              numerical index, keyword arguments named according to their
+              string keys),
+            * **a callable**, in which case the output callable is just the
+              input object, or
+            * **anything else**, in which case the output callable is a
+              constant function which always returns the input object.
+    Returns:
+        callable
+    Examples:
+        >>> to_callable(Symbol(0) + Symbol('x'))(3, x=4)
+        7
+        >>> to_callable(lambda x: x + 1)(10)
+        11
+        >>> to_callable(12)(3, x=4)
+        12
+    """
+    if hasattr(obj, '_eval'):
+        return lambda *args, **kwargs: obj._eval(dict(enumerate(args), **kwargs))
+    elif callable(obj):
+        return obj
+    else:
+        return lambda *args, **kwargs: obj
+
+
+def sym_call(func, *args, **kwargs):
+    """Construct a symbolic representation of `func(*args, **kwargs)`.
+    This is necessary because `func(symbolic)` will not (ordinarily) know to
+    construct a symbolic expression when it receives the symbolic
+    expression `symbolic` as a parameter (if `func` is not itself symbolic).
+    So instead, we write `sym_call(func, symbolic)`.
+    Tip: If the main argument of the function is a (symbolic) DataFrame, then
+    pandas' `pipe` method takes care of this problem without `sym_call`. For
+    instance, while `np.sqrt(X)` won't work, `X.pipe(np.sqrt)` will.
+    Args:
+        func: Function to call on evaluation (can be symbolic).
+        `*args`: Arguments to provide to `func` on evaluation (can be symbolic).
+        `**kwargs`: Keyword arguments to provide to `func` on evaluation (can be
+            symbolic).
+    Returns:
+        `ply.symbolic.Expression`
+    Example:
+        >>> sym_call(math.sqrt, Symbol('x'))._eval({'x': 16})
+        4
+    """
+
+    return Call(func, args=args, kwargs=kwargs)        
