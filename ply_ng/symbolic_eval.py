@@ -214,5 +214,5 @@ def sym_call(func, *args, **kwargs):
 
     return Call(func, args=args, kwargs=kwargs)        
 
-#Assigning X as a receiver of the first argument in hte chain operations it would be root object
+#Assigning X as a receiver of the first argument in the chain operations it would be root object
 X = Symbol(0)

@@ -17,7 +17,8 @@ def inject_ply(pandas_to_augment):
     pandas.Series.ply_filter = _ply_filter
 
     pandas.core.groupby.DataFrameGroupBy.ply_summarize = _ply_mutate_for_groups
-    pandas.core.groupby.SeriesGroupBy.ply_select = _ply_mutate_for_groups
+    pandas.core.groupby.DataFrameGroupBy.ply_mutate = _ply_mutate_for_groups
+    pandas.core.groupby.SeriesGroupBy.ply_mutate = _ply_mutate_for_groups
 
 
 
@@ -85,19 +86,7 @@ def _ply_mutate(self, *args, **kwargs):
     """Transform a dataframe by selecting all old columns and compute new ones.
     Named after dplyr's ``mutate``
     Args:
-        `*args`: Each should be one of:
-            ``'*'``
-                says that all columns in the input dataframe should be
-                included
-            ``'column_name'``
-                says that `column_name` in the input dataframe should be
-                included
-            ``'-column_name'``
-                says that `column_name` in the input dataframe should be
-                excluded.
-            If any `'-column_name'` is present, then `'*'` should be
-            present, and if `'*'` is present, no 'column_name' should be
-            present. Column-includes and column-excludes should not overlap.
+        
     """
     input_columns = set(self.columns)
 
