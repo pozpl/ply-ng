@@ -41,7 +41,7 @@ def _ply_select(self, *args):
             present, and if `'*'` is present, no 'column_name' should be
             present. Column-includes and column-excludes should not overlap.
     """
-    input_columns = set(self.columns)
+    input_columns = list(self.columns)
 
     has_star = False
     include_columns = []
