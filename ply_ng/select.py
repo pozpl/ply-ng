@@ -7,4 +7,4 @@ from . pandas_pipe import *
 # @group_delegation
 # @symbolic_evaluation(eval_as_selector=True)
 def select(df, *args):
-    df.ply_select(*args)
+    return df.ply_select(*args)

@@ -31,7 +31,7 @@ class PipeTest(unittest.TestCase):
     def test_inplace_pipe(self):
         df = test_df[['x','y']].head(5)
         d = test_df.copy()
-        d >>= select(X.x, X.y) >> head(5)
+        d >>= select('x', 'y') >> head(5)
         print(df)
         print(d)
         self.assertTrue(df.equals(d))

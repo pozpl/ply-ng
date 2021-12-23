@@ -95,21 +95,30 @@ class GetAttr(Expression):
     """`GetAttr(obj, name)` is a symbolic expression representing the result of
     `getattr(obj, name)`. (`obj` and `name` can themselves be symbolic.)"""
 
-    def __init__(self, obj, name):
+    def __init__(self, obj, name, inverted=False):
         self._obj = obj
         self._name = name
+        self._inverted = inverted
 
     def _eval(self, context, **options):
         if options.get('log'):
             print('GetAttr._eval', repr(self))
+        if options.get('eval_for_select'):
+            if options.get('log'):
+                print('Returning for select', repr(self), '=>', self._name)
+            return "-" + self._name if self._inverted else self._name           
         evaled_obj = eval_if_symbolic(self._obj, context, **options)
         result = getattr(evaled_obj, self._name)
         if options.get('log'):
             print('Returning', repr(self), '=>', repr(result))
         return result
 
+    def __invert__(self):
+        GetAttr(self._obj, self._name, self._inverted)
+
     def __repr__(self):
         return 'getattr(%s, %s)' % (repr(self._obj), repr(self._name))
+    
 
 class Call(Expression):
     """`Call(func, args, kwargs)` is a symbolic expression representing the
