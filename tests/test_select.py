@@ -12,24 +12,29 @@ inject_ply(pd)
 
 
 test_df = pd.DataFrame(
-    {'x': [1, 2, 3, 4, 5, 6], 'y': [6, 5, 4, 3, 2, 1]},
-    columns=['x', 'y'])
+    {'x': [1, 2, 3, 4, 5, 6], 'y': [6, 5, 4, 3, 2, 1], 'z': [7, 6, 5, 4, 3, 2]},
+    columns=['x', 'y', 'z'])
 
 class SelectTest(unittest.TestCase):
 
     def test_select(self):
         df = test_df[['x','y']]
-        self.assertTrue(df.equals(test_df >> select('x','y')))
-        self.assertTrue(df.equals(test_df >> select(X.x,X.y)))
+        df_xz = test_df[['x', 'z']]
+        df_all = test_df[['x', 'y', 'z']]
+        
+        # self.assertTrue(df.equals(test_df >> select(X[['x','y','z']])))
 
-        #assert df.equals(test_df >> select(0, 1, 6))
-        #assert df.equals(test_df >> select(0, 1, 'price'))
-        #assert df.equals(test_df >> select([0, X.cut], X.price))
-        #assert df.equals(test_df >> select(X.carat, X['cut'], X.price))
-        #assert df.equals(test_df >> select(X[['carat','cut','price']]))
-        #assert df.equals(test_df >> select(X[['carat','cut']], X.price))
-        #assert df.equals(test_df >> select(X.iloc[:,[0,1,6]]))
-        #assert df.equals(test_df >> select([X.loc[:, ['carat','cut','price']]]))
+        self.assertTrue(df.equals(test_df >> select('x','y')))
+        self.assertTrue(df_xz.equals(test_df >> select('*', '-y')))
+        self.assertTrue(df.equals(test_df >> select(X.x,X.y)))
+        self.assertTrue(df.equals(test_df >> select(0, 1)))
+        self.assertTrue(df.equals(test_df >> select(0, 'y')))
+        #self.assertTrue(df_all.equals(test_df >> select([0, X.y], X.z)))
+        self.assertTrue(df_all.equals(test_df >> select(X.x, X['y'], X.z)))
+        self.assertTrue(df_all.equals(test_df >> select(X[['x','y','z']])))
+        self.assertTrue(df_all.equals(test_df >> select(X[['x','y']], X.z)))
+        self.assertTrue(df_all.equals(test_df >> select(X.iloc[:,[0,1,2]])))
+        self.assertTrue(df_all.equals(test_df >> select([X.loc[:, ['x','y','z']]])))
 
 
     # def test_select_inversion():

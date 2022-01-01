@@ -1,5 +1,10 @@
 
 from abc import ABC
+from functools import wraps
+from typing import List, Union
+
+import pandas as pd
+import numpy as np
 
 _magic_method_names = [
     '__abs__', '__add__', '__and__', '__cmp__', '__complex__', '__contains__',
@@ -45,6 +50,10 @@ class Expression(ABC):
     Base class for lazy symblic expressions
     """
 
+    def __init__(self, inverted: bool = False) -> None:
+        self.inverted = inverted
+        super().__init__()
+
     def _eval(self, context, **options):
         """Evaluate a symbolic expression.
         Args:
@@ -76,7 +85,8 @@ class Symbol(Expression):
     Something in evaluation context denoted with a name given to a symbol (through constructor)
     """
 
-    def __init__(self, name):
+    def __init__(self, name, inverted: bool = False):
+        super().__init__(inverted)
         self._name = name
 
     def _eval(self, context, **options):
@@ -87,6 +97,9 @@ class Symbol(Expression):
             print('Returning', repr(self), '=>', repr(result))
         return result
 
+    def __invert__(self):
+        return Symbol(self._name, inverted=not self.inverted)        
+
     def __repr__(self):
         return 'Symbol(%s)' % repr(self._name)
 
@@ -96,6 +109,7 @@ class GetAttr(Expression):
     `getattr(obj, name)`. (`obj` and `name` can themselves be symbolic.)"""
 
     def __init__(self, obj, name, inverted=False):
+        super().__init__(inverted)
         self._obj = obj
         self._name = name
         self._inverted = inverted
@@ -103,10 +117,7 @@ class GetAttr(Expression):
     def _eval(self, context, **options):
         if options.get('log'):
             print('GetAttr._eval', repr(self))
-        if options.get('eval_for_select'):
-            if options.get('log'):
-                print('Returning for select', repr(self), '=>', self._name)
-            return "-" + self._name if self._inverted else self._name           
+             
         evaled_obj = eval_if_symbolic(self._obj, context, **options)
         result = getattr(evaled_obj, self._name)
         if options.get('log'):
@@ -114,7 +125,7 @@ class GetAttr(Expression):
         return result
 
     def __invert__(self):
-        GetAttr(self._obj, self._name, self._inverted)
+        GetAttr(self._obj, self._name, not self._inverted)
 
     def __repr__(self):
         return 'getattr(%s, %s)' % (repr(self._obj), repr(self._name))
@@ -126,16 +137,26 @@ class Call(Expression):
     iterable, and each value in the `kwargs` dictionary can themselves be
     symbolic)."""
 
-    def __init__(self, func, args=[], kwargs={}):
+    def __init__(self, func, args=[], kwargs={}, inverted = False):
+        super().__init__(inverted)
         self._func = func
         self._args = args
         self._kwargs = kwargs
+
+    def _rec_symb_eval(self, val, context, **options):
+        if isinstance(val, (list, tuple)):
+            out = [self._rec_symb_eval(val_, context, **options) for val_ in val]
+        if isinstance(val, tuple):
+            out = tuple(out)
+            return out
+        else:
+            return eval_if_symbolic(val, context, **options)
 
     def _eval(self, context, **options):
         if options.get('log'):
             print('Call._eval', repr(self))
         evaled_func = eval_if_symbolic(self._func, context, **options)
-        evaled_args = [eval_if_symbolic(v, context, **options) for v in self._args]
+        evaled_args = [self._rec_symb_eval(v, context, **options) for v in self._args] 
         evaled_kwargs = dict((k, eval_if_symbolic(v, context, **options)) for k, v in self._kwargs.items() )
         result = evaled_func(*evaled_args, **evaled_kwargs)
         if options.get('log'):
@@ -222,6 +243,138 @@ def sym_call(func, *args, **kwargs):
     """
 
     return Call(func, args=args, kwargs=kwargs)        
+
+EvalMode = Union[List, None, bool]
+
+class PipeEvaluationEngine(object):
+
+    def __init__(self, function, eval_symbols=True, eval_as_label=[],
+                 eval_as_selector=[]):
+        super(PipeEvaluationEngine, self).__init__()
+        self.function = function
+        self.__doc__ = function.__doc__
+
+        self.eval_symbols = eval_symbols
+        self.eval_as_label = eval_as_label
+        self.eval_as_selector = eval_as_selector
+
+    def _rec_symb_eval(self, val, context, **options):
+        if isinstance(val, (list, tuple)):
+            out = [self._rec_symb_eval(val_, context, **options) for val_ in val]
+        if isinstance(val, tuple):
+            out = tuple(out)
+            return out
+        else:
+            return eval_if_symbolic(val, context, **options)
+    
+    
+    def _evaluate_selector(self, df, arg, context, **options):
+
+        negate = np.array([1 for i in range(df.shape[1])])
+        if hasattr(arg, '_eval') or isinstance(arg, Expression):
+            if arg.inverted:
+                negate = negate * -1
+            arg = eval_if_symbolic(arg, context, **options)
+        #Get array with elements designating indexes of selected columns
+        orig_cols = list(df.columns)
+        if isinstance(arg, pd.Series): # covers cases like X.col_name because result will be getter evaluated with context
+            arg = [orig_cols.index(arg.name)]
+        elif isinstance(arg, pd.Index):
+            arg = [orig_cols.index(i) for i in list(arg)]
+        elif isinstance(arg, pd.DataFrame):
+            arg = [orig_cols.index(i) for i in arg.columns]
+        elif isinstance(arg, int):
+            arg = [arg]
+        elif isinstance(arg, str):
+            if arg[0] == '-' and arg[1:] in orig_cols:
+                col_idx = orig_cols.index(arg[1:])
+                negate[col_idx] = -1
+                arg = [col_idx]
+            elif arg == "*":
+                arg = [i for i in range(df.shape[1])]
+            else:     
+                arg = [orig_cols.index(arg)]
+        elif isinstance(arg, (list, tuple)):
+            pars_arg = []
+            for s in arg:
+                if isinstance(s, str):
+                    if s[0] == '-' and s[1:] in orig_cols:
+                        col_idx = orig_cols.index(arg[1:])
+                        negate[col_idx] = -1
+                        s_idx = orig_cols.index(col_idx)
+                    else:     
+                        s_idx = orig_cols.index(arg)
+                    pars_arg.append(s_idx)    
+                else: #should happen only if array of integers passed
+                    pars_arg.append(s)
+            arg = pars_arg
+
+        selected_columns_vector = np.zeros(df.shape[1]) #fill array wit hdimention of # of columns with 0
+        col_idx = np.array(arg) # create np array out of array we got in argument 
+
+        if len(col_idx) > 0:
+            selected_columns_vector[col_idx] = 1
+        selected_columns_vector = selected_columns_vector * negate    
+        return selected_columns_vector #1d np array with dimenstion as # of columns with 0, 1, -1
+            
+
+
+    def _arg_eval(self, df, args, **options):
+        context = {0: df}
+        eval_as_symbols = self._get_argument_eval_mode(self.eval_symbols, args)
+        evas_as_selector = self._get_argument_eval_mode(self.eval_as_selector, args)
+        
+        return [    
+                    self._evaluate_selector(df, v, context, **options) if i in evas_as_selector
+                    else self._rec_symb_eval(v, context, **options) if i in eval_as_symbols
+                    else v                    
+                    for i, v in enumerate(args)
+               ]
+
+
+    def _kwarg_eval(self, df, kwargs, **options):
+        context = {0: df}
+        return {
+            k: (self._rec_symb_eval(v, context, **options))
+            for k, v in kwargs.items()
+        }
+
+
+    def _get_argument_eval_mode(self, eval_mode: EvalMode, args):
+        if eval_mode == True or ('*' in eval_mode): #evaluation mode can be boolean
+            return [i for i in range(len(args))]
+        elif eval_mode in [False, None]:
+            return []
+        return eval_mode        
+
+    def __call__(self, *args, **kwargs):
+        df = args[0]
+
+        args = self._arg_eval(df, args[1:])
+        kwargs = self._kwarg_eval(df, kwargs)
+
+        return self.function(df, *args, **kwargs)
+
+
+def symbolic_pipe_evaluation(function=None, eval_symbols=True, eval_as_label=[],
+                             eval_as_selector=[]):
+    if function:
+        return PipeEvaluationEngine(function)
+    else:
+        @wraps(function)
+        def wrapper(function):
+            return PipeEvaluationEngine(function, eval_symbols=eval_symbols,
+                                      eval_as_label=eval_as_label,
+                                      eval_as_selector=eval_as_selector)
+
+        return wrapper        
+
+def flatten(l):
+    for el in l:
+        if isinstance(el, (tuple, list)):
+            yield from flatten(el)
+        else:
+            yield el
 
 #Assigning X as a receiver of the first argument in the chain operations it would be root object
 X = Symbol(0)

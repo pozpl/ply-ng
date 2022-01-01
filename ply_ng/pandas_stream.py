@@ -48,6 +48,7 @@ def _ply_select(self, *args):
     exclude_columns = []
 
     for arg in args:
+
         if arg == '*':
             if has_star:
                 raise ValueError('ply_select received repeated stars, there could be only one * argument')
