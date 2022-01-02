@@ -4,7 +4,7 @@ from . pandas_pipe import *
 
 def resolve_selection(df, *args, drop=False):
     if len(args) > 0:
-        args = [a for a in flatten(args)] # each arg is an array with dim $ of df columns
+        args = [a for a in flatten(args)] # each arg is an array with dim # of df columns
         ordering = []
         column_indices = np.zeros(df.shape[1])
         for selector in args: #args is array args[#of args, # of cols in df]
@@ -24,7 +24,6 @@ def resolve_selection(df, *args, drop=False):
 @pipe
 @symbolic_pipe_evaluation(eval_as_selector=True)
 # @group_delegation
-# @symbolic_evaluation()
 def select(df, *args):
     ordering, column_indices = resolve_selection(df, *args)
     if (column_indices == 0).all():
@@ -37,3 +36,16 @@ def select(df, *args):
         return df[ordering]
     else:
         return df    
+
+
+
+@pipe
+# @group_delegation
+@symbolic_pipe_evaluation(eval_as_selector=True)
+def drop(df, *args):
+    _, column_indices = resolve_selection(df, *args, drop=True)
+    if (column_indices == 0).all():
+        return df[[]]
+    selection = np.where((column_indices == np.max(column_indices)) &
+                         (column_indices >= 0))[0]
+    return df.iloc[:, selection]

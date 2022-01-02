@@ -78,6 +78,9 @@ class Expression(ABC):
         """Construct a symbolic representation of `self(*args, **kwargs)`."""
         return Call(self, args=args, kwargs=kwargs)
 
+    def __invert__(self):
+        return NotImplementedError       
+
 
 class Symbol(Expression):
     """`Symbol(name)` is an atomic symbolic expression, labelled with an
@@ -124,8 +127,8 @@ class GetAttr(Expression):
             print('Returning', repr(self), '=>', repr(result))
         return result
 
-    def __invert__(self):
-        GetAttr(self._obj, self._name, not self._inverted)
+    def __invert__(self): 
+        return GetAttr(self._obj, self._name, inverted = not self._inverted)
 
     def __repr__(self):
         return 'getattr(%s, %s)' % (repr(self._obj), repr(self._name))
@@ -267,6 +270,11 @@ class PipeEvaluationEngine(object):
         else:
             return eval_if_symbolic(val, context, **options)
     
+    def _rec_select_eval(self, df, arg, context, **options):
+        if isinstance(arg, (list, tuple)):
+            return [self._rec_select_eval(df, a_, context, **options) for a_ in arg]
+        else:
+            return self._evaluate_selector(df, arg, context, **options)
     
     def _evaluate_selector(self, df, arg, context, **options):
 
@@ -310,7 +318,7 @@ class PipeEvaluationEngine(object):
             arg = pars_arg
 
         selected_columns_vector = np.zeros(df.shape[1]) #fill array wit hdimention of # of columns with 0
-        col_idx = np.array(arg) # create np array out of array we got in argument 
+        col_idx = np.array(arg) if arg is not None else np.zeros(0) # create np array out of array we got in argument 
 
         if len(col_idx) > 0:
             selected_columns_vector[col_idx] = 1
@@ -325,7 +333,7 @@ class PipeEvaluationEngine(object):
         evas_as_selector = self._get_argument_eval_mode(self.eval_as_selector, args)
         
         return [    
-                    self._evaluate_selector(df, v, context, **options) if i in evas_as_selector
+                    self._rec_select_eval(df, v, context, **options) if i in evas_as_selector
                     else self._rec_symb_eval(v, context, **options) if i in eval_as_symbols
                     else v                    
                     for i, v in enumerate(args)

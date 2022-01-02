@@ -21,8 +21,8 @@ class SelectTest(unittest.TestCase):
         df = test_df[['x','y']]
         df_xz = test_df[['x', 'z']]
         df_all = test_df[['x', 'y', 'z']]
-        
-        # self.assertTrue(df.equals(test_df >> select(X[['x','y','z']])))
+
+        self.assertTrue(df_all.equals(test_df >> select([X.loc[:, ['x','y','z']]])))
 
         self.assertTrue(df.equals(test_df >> select('x','y')))
         self.assertTrue(df_xz.equals(test_df >> select('*', '-y')))
@@ -34,12 +34,11 @@ class SelectTest(unittest.TestCase):
         self.assertTrue(df_all.equals(test_df >> select(X[['x','y','z']])))
         self.assertTrue(df_all.equals(test_df >> select(X[['x','y']], X.z)))
         self.assertTrue(df_all.equals(test_df >> select(X.iloc[:,[0,1,2]])))
+        self.assertTrue(df_all.equals(test_df >> select(X.loc[:, ['x','y','z']])))        
         self.assertTrue(df_all.equals(test_df >> select([X.loc[:, ['x','y','z']]])))
 
 
-    # def test_select_inversion():
-    #     df = test_df.iloc[:, 3:]
-    #     d = test_df >> select(~X.carat, ~X.cut, ~X.color)
-    #     print(df.head())
-    #     print(d.head())
-    #     assert df.equals(d)
+    def test_select_inversion(self):
+        df = test_df.iloc[:, 2:]
+        d = test_df >> select(~X.x, ~X.y)
+        self.assertTrue(df.equals(d))
