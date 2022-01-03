@@ -32,8 +32,6 @@ class PipeTest(unittest.TestCase):
         df = test_df[['x','y']].head(5)
         d = test_df.copy()
         d >>= select('x', 'y') >> head(5)
-        print(df)
-        print(d)
         self.assertTrue(df.equals(d))
 
 if __name__ == '__main__':
