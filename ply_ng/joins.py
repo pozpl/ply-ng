@@ -14,7 +14,6 @@ def _get_join_parameters(join_kw_args):
     return left_on, right_on, suffixes
 
 @pipe
-@symbolic_pipe_evaluation()
 def inner_join(df1, df2, **kwargs):
     """
     Example:
@@ -26,3 +25,29 @@ def inner_join(df1, df2, **kwargs):
     joined = df1.merge(df2, how='inner', left_on=left_on,
                       right_on=right_on, suffixes=suffixes)
     return joined    
+
+@pipe
+def left_join(df1, df2, **kwargs):
+    """
+    Example:
+    a >> left_join(b, by='x')
+    a >> left_join(b, by=['x', 'y', 'z'])
+    a >> left_join(b, by=[('x', 'x_from_b'), ('y', 'y_from_b')])
+    """
+    left_on, right_on, suffixes = _get_join_parameters(kwargs)
+    joined = df1.merge(df2, how='left', left_on=left_on,
+                      right_on=right_on, suffixes=suffixes)
+    return joined        
+
+@pipe
+def right_join(df1, df2, **kwargs):
+    """
+    Example:
+    a >> right_join(b, by='x')
+    a >> right_join(b, by=['x', 'y', 'z'])
+    a >> right_join(b, by=[('x', 'x_from_b'), ('y', 'y_from_b')])
+    """
+    left_on, right_on, suffixes = _get_join_parameters(kwargs)
+    joined = df1.merge(df2, how='right', left_on=left_on,
+                      right_on=right_on, suffixes=suffixes)
+    return joined            

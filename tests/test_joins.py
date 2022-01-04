@@ -55,6 +55,30 @@ class JoinsTest(unittest.TestCase):
                 columns=['x', 'y_one', 'z', 'y_two', 'q'])     
         joined = test_df >> inner_join(test_df2, by=['x'], suffixes=('_one', '_two'))
         self.assertTrue(joined.equals(df))            
+
+
+    def test_left_join(self):
+        exp_df = pd.DataFrame({
+            'x': [1, 2, 3, 4, 5, 6], 
+            'y': [6, 5, 4, 3, 2, 1], 
+            'z': [7, 6, 5, 4, 3, 2],
+            'v': [7, 6, 5, np.nan, np.nan, np.nan]
+        })
+
+        joined = test_df >> left_join(test_df3, by='x')
+        self.assertTrue(joined.equals(exp_df))
+
+
+    def test_right_join(self):
+        exp_df = pd.DataFrame({
+            'x': [1, 2, 3, 4, 5, 6], 
+            'v': [7, 6, 5, np.nan, np.nan, np.nan],
+            'y': [6, 5, 4, 3, 2, 1], 
+            'z': [7, 6, 5, 4, 3, 2]
+        })
+
+        joined = test_df3 >> right_join(test_df, by='x')
+        self.assertTrue(joined.equals(exp_df))   
     
 
 if __name__ == '__main__':
