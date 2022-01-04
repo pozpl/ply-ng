@@ -353,7 +353,14 @@ class PipeEvaluationEngine(object):
             return [i for i in range(len(args))]
         elif eval_mode in [False, None]:
             return []
-        return eval_mode        
+        return eval_mode   
+
+    def _get_kwargs_eval_mode(self, request, kwargs):
+        if (request == True) or ('**' in request):
+            return [k for k in kwargs.keys()]
+        elif request in [None, False]:
+            return []
+        return request         
 
     def __call__(self, *args, **kwargs):
         df = args[0]
