@@ -274,7 +274,7 @@ class PipeEvaluationEngine(object):
         if isinstance(arg, (list, tuple)):
             return [self._rec_select_eval(df, a_, context, **options) for a_ in arg]
         else:
-            return self._evaluate_selector(df, arg, context, **options)
+            return self._evaluate_selector(df, arg, context, **options)            
     
     def _evaluate_selector(self, df, arg, context, **options):
 
@@ -325,15 +325,32 @@ class PipeEvaluationEngine(object):
         selected_columns_vector = selected_columns_vector * negate    
         return selected_columns_vector #1d np array with dimenstion as # of columns with 0, 1, -1
             
+    def _rec_eval_label(self, df, arg, context):
+        if isinstance(arg, (list, tuple)):
+            return [self._rec_eval_label(df, _a, context) for _a in arg]
+        else:
+            return self._evaluate_label(df, arg, context)     
 
+    def _evaluate_label(self, df, arg, context):
+        arg = eval_if_symbolic(arg, context)
+        cols = list(df.columns)
+        if isinstance(arg, pd.Series):
+            arg = arg.name
+        if isinstance(arg, pd.Index):
+            arg = list(arg)
+        if isinstance(arg, int):
+            arg = cols[arg]
+        return arg
 
     def _arg_eval(self, df, args, **options):
         context = {0: df}
         eval_as_symbols = self._get_argument_eval_mode(self.eval_symbols, args)
-        evas_as_selector = self._get_argument_eval_mode(self.eval_as_selector, args)
+        eval_as_selector = self._get_argument_eval_mode(self.eval_as_selector, args)
+        eval_as_label = self._get_argument_eval_mode(self.eval_as_label, args)
         
         return [    
-                    self._rec_select_eval(df, v, context, **options) if i in evas_as_selector
+                    self._rec_select_eval(df, v, context, **options) if i in eval_as_selector
+                    else self._rec_eval_label(df, v, context) if i in eval_as_label
                     else self._rec_symb_eval(v, context, **options) if i in eval_as_symbols
                     else v                    
                     for i, v in enumerate(args)
@@ -342,8 +359,17 @@ class PipeEvaluationEngine(object):
 
     def _kwarg_eval(self, df, kwargs, **options):
         context = {0: df}
+
+        eval_as_symbols = self._get_kwargs_eval_mode(self.eval_symbols, kwargs)
+        eval_as_selector = self._get_kwargs_eval_mode(self.eval_as_selector, kwargs)
+        eval_as_label = self._get_kwargs_eval_mode(self.eval_as_label, kwargs)
+        
         return {
-            k: (self._rec_symb_eval(v, context, **options))
+            k: (self._rec_symb_eval(v, context, **options) if k in eval_as_symbols
+            else self._rec_select_eval(df, v, context, **options) if k in eval_as_selector
+            else self._rec_eval_label(df, v, context) if k in eval_as_label
+            else v            
+            )
             for k, v in kwargs.items()
         }
 
