@@ -28,6 +28,7 @@ def inner_join(df1, df2, **kwargs):
     return joined    
 
 @pipe
+@symbolic_pipe_evaluation(eval_as_label=True)
 def left_join(df1, df2, **kwargs):
     """
     Example:
@@ -41,6 +42,7 @@ def left_join(df1, df2, **kwargs):
     return joined        
 
 @pipe
+@symbolic_pipe_evaluation(eval_as_label=True)
 def right_join(df1, df2, **kwargs):
     """
     Example:
