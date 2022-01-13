@@ -344,6 +344,8 @@ class PipeEvaluationEngine(object):
 
     def _arg_eval(self, df, args, **options):
         context = {0: df}
+        if len(args) > 0 and isinstance(args[0], pd.DataFrame): 
+            context[1] = args[0]
         eval_as_symbols = self._get_argument_eval_mode(self.eval_symbols, args)
         eval_as_selector = self._get_argument_eval_mode(self.eval_as_selector, args)
         eval_as_label = self._get_argument_eval_mode(self.eval_as_label, args)
@@ -357,17 +359,19 @@ class PipeEvaluationEngine(object):
                ]
 
 
-    def _kwarg_eval(self, df, kwargs, **options):
+    def _kwarg_eval(self, df, args, kwargs, **options):
         context = {0: df}
+        if len(args) > 0 and isinstance(args[0], pd.DataFrame): 
+            context[1] = args[0]
 
         eval_as_symbols = self._get_kwargs_eval_mode(self.eval_symbols, kwargs)
         eval_as_selector = self._get_kwargs_eval_mode(self.eval_as_selector, kwargs)
         eval_as_label = self._get_kwargs_eval_mode(self.eval_as_label, kwargs)
         
         return {
-            k: (self._rec_symb_eval(v, context, **options) if k in eval_as_symbols
+            k: (self._rec_eval_label(df, v, context) if k in eval_as_label
             else self._rec_select_eval(df, v, context, **options) if k in eval_as_selector
-            else self._rec_eval_label(df, v, context) if k in eval_as_label
+            else self._rec_symb_eval(v, context, **options) if k in eval_as_symbols
             else v            
             )
             for k, v in kwargs.items()
@@ -392,7 +396,7 @@ class PipeEvaluationEngine(object):
         df = args[0]
 
         args = self._arg_eval(df, args[1:])
-        kwargs = self._kwarg_eval(df, kwargs)
+        kwargs = self._kwarg_eval(df, args, kwargs)
 
         return self.function(df, *args, **kwargs)
 
@@ -419,3 +423,4 @@ def flatten(l):
 
 #Assigning X as a receiver of the first argument in the chain operations it would be root object
 X = Symbol(0)
+Y = Symbol(1)

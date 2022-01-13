@@ -28,12 +28,28 @@ class JoinsTest(unittest.TestCase):
         joined = test_df >> inner_join(test_df3, by='x')
         self.assertTrue(joined.equals(df))
 
+    def test_ineer_join_by_one_column_symbolic(self):
+        df = pd.DataFrame(
+            {'x': [1, 2, 3], 'y': [6, 5, 4], 'z': [7, 6, 5], 'v': [7, 6, 5]},
+                columns=['x', 'y', 'z', 'v'])     
+        joined = test_df >> inner_join(test_df3, by=X.x)
+        self.assertTrue(joined.equals(df))    
+
+
     def test_ineer_join_by_two_columns(self):
         df = pd.DataFrame(
             {'x': [1, 2, 3, 4], 'y': [6, 5, 4, 3], 'z': [7, 6, 5, 4], 'q': [7, 6, 5, 4]},
                 columns=['x', 'y', 'z', 'q'])     
         joined = test_df >> inner_join(test_df2, by=[('x', 'x'), ('y', 'y')])
         self.assertTrue(joined.equals(df))  
+
+    def test_ineer_join_by_two_columns_symb(self):
+        df = pd.DataFrame(
+            {'x': [1, 2, 3, 4], 'y': [6, 5, 4, 3], 'z': [7, 6, 5, 4], 'q': [7, 6, 5, 4]},
+                columns=['x', 'y', 'z', 'q'])     
+        joined = test_df >> inner_join(test_df2, by=[(X.x, Y.x), (X.y, Y.y)])
+        self.assertTrue(joined.equals(df))  
+
 
     def test_ineer_join_by_two_columns_same_col_name(self):
         df = pd.DataFrame(

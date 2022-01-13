@@ -7,13 +7,14 @@ def _get_join_parameters(join_kw_args):
     if isinstance(by, tuple): # by = ('x', 'abc')
         left_on, right_on = by
     elif isinstance(by, list): # either by = ['a', 'b', 'c'] or by = [('a', 'x1'), ('b', 'x2'), ('c', 'x3')]
-        by = [x if isinstance(x, tuple) else (x, x) for x in by]
+        by = [x if isinstance(x, tuple) or isinstance(x, list) else (x, x) for x in by]
         left_on, right_on = (list(x) for x in zip(*by))
     else:
         left_on, right_on = by, by
     return left_on, right_on, suffixes
 
 @pipe
+@symbolic_pipe_evaluation(eval_as_label=True)
 def inner_join(df1, df2, **kwargs):
     """
     Example:
