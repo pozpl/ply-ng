@@ -14,6 +14,12 @@ class GroupingTest(unittest.TestCase):
             'z': [7, 6, 5]
         })
 
+        self.test_df2 = pd.DataFrame({
+            'x': [1, 2, 1, 2], 
+            'y': [1, 2, 1, 4],
+            'z': [7, 6, 5, 4]
+        })
+
 
 
     def test_grouping(self):
@@ -32,7 +38,7 @@ class GroupingTest(unittest.TestCase):
         self.assertTrue(d._grouped_by == ['x',])
         d_ung = d >> ungroup()
         self.assertTrue(d_ung._grouped_by == None)
-        
+
 
 
 

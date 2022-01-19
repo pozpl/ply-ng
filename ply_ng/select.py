@@ -1,3 +1,4 @@
+from ply_ng.group import GroupedEvaluationService
 from ply_ng.symbolic_eval import flatten, symbolic_pipe_evaluation, to_callable
 from . pandas_pipe import *
 
@@ -22,8 +23,8 @@ def resolve_selection(df, *args, drop=False):
     return ordering, column_indices
 
 @pipe
+@GroupedEvaluationService
 @symbolic_pipe_evaluation(eval_as_selector=True)
-# @group_delegation
 def select(df, *args):
     ordering, column_indices = resolve_selection(df, *args)
     if (column_indices == 0).all():
@@ -40,7 +41,7 @@ def select(df, *args):
 
 
 @pipe
-# @group_delegation
+@GroupedEvaluationService
 @symbolic_pipe_evaluation(eval_as_selector=True)
 def drop(df, *args):
     _, column_indices = resolve_selection(df, *args, drop=True)
