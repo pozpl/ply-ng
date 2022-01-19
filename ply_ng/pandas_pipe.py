@@ -31,3 +31,5 @@ class pipe(object):
 
     def __call__(self, *args, **kwargs):
         return pipe(lambda x: self.function(x, *args, **kwargs))
+
+        

@@ -2,6 +2,7 @@
 from abc import ABC
 from functools import wraps
 from typing import List, Union
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -247,7 +248,7 @@ def sym_call(func, *args, **kwargs):
 
     return Call(func, args=args, kwargs=kwargs)        
 
-EvalMode = Union[List, None, bool]
+EvalMode = Union[List, None, bool] # type for evaluation mode type
 
 class PipeEvaluationEngine(object):
 
@@ -359,7 +360,7 @@ class PipeEvaluationEngine(object):
                ]
 
 
-    def _kwarg_eval(self, df, args, kwargs, **options):
+    def _kwarg_eval(self, df: pd.DataFrame, args, kwargs, **options):
         context = {0: df}
         if len(args) > 0 and isinstance(args[0], pd.DataFrame): 
             context[1] = args[0]
@@ -399,6 +400,7 @@ class PipeEvaluationEngine(object):
         kwargs = self._kwarg_eval(df, args, kwargs)
 
         return self.function(df, *args, **kwargs)
+
 
 
 def symbolic_pipe_evaluation(function=None, eval_symbols=True, eval_as_label=[],
