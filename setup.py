@@ -6,6 +6,6 @@ setup(name='ply-ng',
       url='https://github.com/pozpl/ply-ng',
       author='Pavel Pozdniak',
       author_email='pozdpl@gmail.com',
-      license='MIT',
+      license='GNU General Public License v3.0',
       packages= find_packages(),
       zip_safe=False)
